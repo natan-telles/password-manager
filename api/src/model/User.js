@@ -55,7 +55,7 @@ class User {
 
     async readAll(){
         try {
-            const { rows } = await db.query('SELECT id, "user", email FROM users;');
+            const { rows } = await db.query('SELECT id, "user", email FROM users ORDER BY id ASC;');
             return rows;
         } catch (error) {
             console.error("Error while reading users:", error);
@@ -65,7 +65,7 @@ class User {
 
     async readById(){
         try {
-            const { rows } = await db.query("SELECT id, user, email, password FROM users WHERE id = $1", [this._id]);
+            const { rows } = await db.query('SELECT id, "user", email, password FROM users WHERE id = $1', [this._id]);
             return rows[0];
         } catch (error) {
             console.error("Error while reading user:", error);
@@ -75,7 +75,7 @@ class User {
 
     async update(){
         try {
-            const result = await db.query("UPDATE users SET user = $1, email = $2, password = $3 WHERE id = $4", [this._user, this._email, this._password, this._id]);
+            const result = await db.query('UPDATE users SET "user" = $1, email = $2, password = $3 WHERE id = $4', [this._user, this._email, this._password, this._id]);
             return result.rowCount > 0;
         } catch (error) {
             console.error("Error while updating user:", error);
@@ -95,7 +95,7 @@ class User {
 
     async isUser(){
         try {
-            const { rows } = await db.query("SELECT COUNT(*) AS qtd FROM users WHERE user = $1 OR email = $2", [this._user, this._email]);
+            const { rows } = await db.query('SELECT COUNT(*) AS qtd FROM users WHERE "user" = $1 OR email = $2', [this._user, this._email]);
             return rows[0].qtd > 0;
         } catch (error) {
             console.error("Error while checking user:", error);

@@ -44,7 +44,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Toaster } from "sonner"
-import { PlusCircle, LogOut, Loader2, Sun, Moon, Edit, Trash2, Copy, KeyRound } from "lucide-react"
+import { PlusCircle, LogOut, Loader2, Sun, Moon, Edit, Trash2, Copy, KeyRound, Settings, User, Mail } from "lucide-react"
 
 interface PasswordEntry {
   id: string
@@ -53,12 +53,26 @@ interface PasswordEntry {
   password: string
 }
 
+interface UserData {
+  id: string;
+  username: string;
+  email: string;
+}
+
 export default function VaultPage() {
   const router = useRouter()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [passwords, setPasswords] = useState<PasswordEntry[]>([])
   const [currentPassword, setCurrentPassword] = useState<PasswordEntry | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [userData, setUserData] = useState<UserData | null>(null);
+
+  // Estados para o formulário de edição de usuário
+  const [newUsername, setNewUsername] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+
   // Ref para o formulário do modal, para poder resetá-lo
   const formRef = useRef<HTMLFormElement>(null)
 
@@ -78,7 +92,24 @@ export default function VaultPage() {
   useEffect(() => {
     const loggedIn = sessionStorage.getItem("isLoggedIn")
     if (loggedIn === "true") {
-      setIsAuthenticated(true)
+      setIsAuthenticated(true);
+      const storedUser = sessionStorage.getItem("user");
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        // Busca os dados completos do usuário para preencher o formulário de configurações
+        fetch(`http://localhost:3001/users/${parsedUser.id}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data) {
+              setUserData(data);
+              setNewUsername(data.user); // Corrigido de data.username para data.user
+              setNewEmail(data.email);
+            }
+          })
+          .catch(err => console.error("Erro ao buscar dados do usuário:", err));
+      } else {
+        router.push("/");
+      }
     } else {
       router.push("/") // Redireciona se não estiver logado
     }
@@ -156,6 +187,62 @@ export default function VaultPage() {
     navigator.clipboard.writeText(password).then(() => toast.success("Senha copiada para a área de transferência!"))
   }
 
+  const handleUpdateUser = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!userData) return;
+
+    const body: { user: string; email: string; password?: string } = {
+      user: newUsername,
+      email: newEmail,
+    };
+
+    // Só inclui a senha no body se ela for alterada
+    if (newPassword) {
+      body.password = newPassword;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:3001/users/${userData.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erro ao atualizar usuário.");
+      }
+
+      toast.success("Dados atualizados com sucesso!");
+      // Atualiza os dados locais
+      setUserData(prev => prev ? { ...prev, username: newUsername, email: newEmail } : null);
+      sessionStorage.setItem("user", JSON.stringify({ id: userData.id, username: newUsername }));
+      setIsSettingsModalOpen(false);
+      setNewPassword(''); // Limpa o campo de senha
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!userData) return;
+
+    try {
+      const response = await fetch(`http://localhost:3001/users/${userData.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao deletar a conta.");
+      }
+
+      toast.success("Conta deletada com sucesso. Você será redirecionado.");
+      setTimeout(handleLogout, 2000); // Desloga e redireciona após 2 segundos
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
   // Mostra um loader enquanto verifica a autenticação para evitar piscar a tela
   if (!isAuthenticated) {
     return (
@@ -173,12 +260,67 @@ export default function VaultPage() {
       <Card className="w-full max-w-4xl mx-auto shadow-lg dark:bg-zinc-900 dark:border-zinc-800">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-2xl font-bold dark:text-zinc-50">Seu Cofre</CardTitle>
+            <CardTitle className="text-2xl font-bold dark:text-zinc-50">Cofre de {userData?.user}</CardTitle>
             <CardDescription className="dark:text-zinc-400">
               Aqui estão suas senhas e credenciais salvas.
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
+            <Dialog open={isSettingsModalOpen} onOpenChange={setIsSettingsModalOpen}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Settings className="h-[1.2rem] w-[1.2rem]" />
+                  <span className="sr-only">Configurações</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px] dark:bg-zinc-900 dark:border-zinc-800">
+                <DialogHeader>
+                  <DialogTitle className="dark:text-zinc-50">Configurações da Conta</DialogTitle>
+                  <DialogDescription className="dark:text-zinc-400">
+                    Edite seus dados ou delete sua conta.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleUpdateUser}>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="settings-username" className="text-right dark:text-zinc-300">Usuário</Label>
+                      <Input id="settings-username" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} className="col-span-3 dark:bg-zinc-800 dark:border-zinc-700" required />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="settings-email" className="text-right dark:text-zinc-300">Email</Label>
+                      <Input id="settings-email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className="col-span-3 dark:bg-zinc-800 dark:border-zinc-700" required />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="settings-password" className="text-right dark:text-zinc-300">Nova Senha</Label>
+                      <Input id="settings-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="(Deixe em branco para não alterar)" className="col-span-3 dark:bg-zinc-800 dark:border-zinc-700" />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit" className="dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 cursor-pointer">Salvar Alterações</Button>
+                  </DialogFooter>
+                </form>
+                <div className="border-t dark:border-zinc-800 pt-4 mt-4">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" className="w-full cursor-pointer">Deletar Conta</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="dark:bg-zinc-900 dark:border-zinc-800">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="dark:text-zinc-50">Tem certeza absoluta?</AlertDialogTitle>
+                        <AlertDialogDescription className="dark:text-zinc-400">
+                          Esta ação não pode ser desfeita. Isso excluirá permanentemente sua conta e todos os seus dados.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="dark:bg-transparent dark:text-zinc-50 dark:hover:bg-zinc-800 cursor-pointer">Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteAccount} className="bg-red-600 hover:bg-red-700 dark:text-zinc-50 cursor-pointer">Sim, deletar conta</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
               <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
@@ -249,7 +391,7 @@ export default function VaultPage() {
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel className="dark:bg-transparent dark:text-zinc-50 dark:hover:bg-zinc-800 cursor-pointer">Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(p.id)} className="bg-red-600 hover:bg-red-700 dark:text-zinc-50 cursor-pointer">Excluir</AlertDialogAction>
+                            <AlertDialogAction onClick={() => handleDelete(p.id)} className="bg-red-600 hover:bg-red-700 dark:text-zinc-50 cursor-pointer">Excluir Senha</AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>

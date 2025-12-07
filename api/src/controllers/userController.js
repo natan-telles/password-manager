@@ -12,7 +12,7 @@ const createUser = async (req, res) => {
         newUser._password = password; // Lembre-se de fazer o hash da senha aqui!
 
         const isUser = await newUser.isUser();
-        if(isUser){
+        if (isUser) {
             return res.status(400).json({ error: "Usuário já existe." });
         }
 
@@ -30,15 +30,75 @@ const createUser = async (req, res) => {
 };
 
 const getUsers = async (req, res) => {
-    try{
+    try {
         const user = new User();
         const users = await user.readAll();
         return res.status(200).json(users);
-        
+
     } catch (error) {
         console.error("Erro ao buscar usuários:", error);
         return res.status(500).json({ error: "Erro interno do servidor." });
-    } 
+    }
+};
+
+const getUserById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user = new User();
+        user._id = id;
+        const foundUser = await user.readById(id);
+
+        if (!foundUser) {
+            return res.status(404).json({ error: "Usuário não encontrado." });
+        }
+
+        return res.status(200).json(foundUser);
+    } catch (error) {
+        console.error("Erro ao buscar usuário por ID:", error);
+        return res.status(500).json({ error: "Erro interno do servidor." });
+    }
+};
+
+const updateUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { user, email, password } = req.body;
+
+        const userToUpdate = new User();
+        userToUpdate._id = id;
+        userToUpdate._user = user;
+        userToUpdate._email = email;
+        userToUpdate._password = password;
+
+        const success = await userToUpdate.update();
+
+        if (success) {
+            return res.status(200).json({ message: "Usuário atualizado com sucesso!" });
+        } else {
+            return res.status(404).json({ error: "Usuário não encontrado." });
+        }
+    } catch (error) {
+        console.error("Erro ao atualizar usuário:", error);
+        return res.status(500).json({ error: "Ocorreu um erro interno no servidor." });
+    }
+};
+
+const deleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userToDelete = new User();
+        userToDelete._id = id;
+        const success = await userToDelete.delete();
+
+        if (success) {
+            return res.status(200).json({ message: "Usuário deletado com sucesso!" });
+        } else {
+            return res.status(404).json({ error: "Usuário não encontrado." });
+        }
+    } catch (error) {
+        console.error("Erro ao deletar usuário:", error);
+        return res.status(500).json({ error: "Ocorreu um erro interno no servidor." });
+    }
 };
 
 const loginUser = async (req, res) => {
@@ -76,4 +136,4 @@ const loginUser = async (req, res) => {
     }
 };
 
-module.exports = { createUser, getUsers, loginUser };
+module.exports = { createUser, getUsers, getUserById, deleteUser, updateUser, loginUser };
