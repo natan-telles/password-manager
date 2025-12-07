@@ -73,9 +73,29 @@ class User {
         }
     }
 
-    async update(){
+    async update(updateData){
         try {
-            const result = await db.query('UPDATE users SET "user" = $1, email = $2, password = $3 WHERE id = $4', [this._user, this._email, this._password, this._id]);
+            // Se não houver dados para atualizar, retorna falso.
+            if (Object.keys(updateData).length === 0) {
+                return false;
+            }
+
+            // Constrói a query dinamicamente
+            const setClauses = [];
+            const values = [];
+            let paramIndex = 1;
+
+            for (const key in updateData) {
+                // Usando aspas duplas para nomes de colunas que são palavras reservadas como "user"
+                setClauses.push(`"${key}" = $${paramIndex}`);
+                values.push(updateData[key]);
+                paramIndex++;
+            }
+
+            values.push(this._id); // Adiciona o ID do usuário como último parâmetro
+            const queryString = `UPDATE users SET ${setClauses.join(', ')} WHERE id = $${paramIndex}`;
+
+            const result = await db.query(queryString, values);
             return result.rowCount > 0;
         } catch (error) {
             console.error("Error while updating user:", error);

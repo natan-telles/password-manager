@@ -62,15 +62,19 @@ const getUserById = async (req, res) => {
 const updateUser = async (req, res) => {
     try {
         const { id } = req.params;
-        const { user, email, password } = req.body;
+        // Apenas os campos que podem ser atualizados
+        const { user, email, password } = req.body; 
 
         const userToUpdate = new User();
         userToUpdate._id = id;
-        userToUpdate._user = user;
-        userToUpdate._email = email;
-        userToUpdate._password = password;
 
-        const success = await userToUpdate.update();
+        // Passa um objeto com os dados a serem atualizados
+        const updateData = {};
+        if (user !== undefined) updateData.user = user;
+        if (email !== undefined) updateData.email = email;
+        if (password !== undefined) updateData.password = password;
+
+        const success = await userToUpdate.update(updateData);
 
         if (success) {
             return res.status(200).json({ message: "Usuário atualizado com sucesso!" });

@@ -191,21 +191,21 @@ export default function VaultPage() {
     e.preventDefault();
     if (!userData) return;
 
-    const body: { user: string; email: string; password?: string } = {
+    const updatedData: { user: string; email: string; password?: string } = {
       user: newUsername,
       email: newEmail,
     };
 
     // Só inclui a senha no body se ela for alterada
-    if (newPassword) {
-      body.password = newPassword;
+    if (newPassword.trim() !== '') {
+      updatedData.password = newPassword;
     }
 
     try {
       const response = await fetch(`http://localhost:3001/users/${userData.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(updatedData),
       });
 
       if (!response.ok) {
@@ -215,7 +215,7 @@ export default function VaultPage() {
 
       toast.success("Dados atualizados com sucesso!");
       // Atualiza os dados locais
-      setUserData(prev => prev ? { ...prev, username: newUsername, email: newEmail } : null);
+      setUserData(prev => prev ? { ...prev, user: newUsername, email: newEmail } : null);
       sessionStorage.setItem("user", JSON.stringify({ id: userData.id, username: newUsername }));
       setIsSettingsModalOpen(false);
       setNewPassword(''); // Limpa o campo de senha
@@ -243,6 +243,11 @@ export default function VaultPage() {
     }
   };
 
+
+
+
+  
+
   // Mostra um loader enquanto verifica a autenticação para evitar piscar a tela
   if (!isAuthenticated) {
     return (
@@ -268,7 +273,7 @@ export default function VaultPage() {
           <div className="flex items-center gap-2">
             <Dialog open={isSettingsModalOpen} onOpenChange={setIsSettingsModalOpen}>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button className="cursor-pointer" variant="ghost" size="icon">
                   <Settings className="h-[1.2rem] w-[1.2rem]" />
                   <span className="sr-only">Configurações</span>
                 </Button>
@@ -321,12 +326,12 @@ export default function VaultPage() {
               </DialogContent>
             </Dialog>
 
-            <Button variant="ghost" size="icon" onClick={toggleTheme}>
+            <Button className="cursor-pointer" variant="ghost" size="icon" onClick={toggleTheme}>
               <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
               <span className="sr-only">Alternar tema</span>
             </Button>
-            <Button onClick={handleLogout} variant="outline" className="dark:text-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800">
+            <Button onClick={handleLogout} variant="outline" className="dark:text-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800 cursor-pointer">
               <LogOut className="mr-2 h-4 w-4" />
               Sair
             </Button>
