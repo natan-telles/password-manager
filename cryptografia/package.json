@@ -1,0 +1,15 @@
+{
+  "name": "cryptografia",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bcr.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.2.3"
+  }
+}
